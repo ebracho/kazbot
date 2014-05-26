@@ -1,27 +1,16 @@
-import socket
-import sqlite3
-import string
-import connection_settings
+import socket, sqlite3, string
+from connection_settings import HOST, PORT, CHAN, NICK
 
 class Kazbot(object):
    
     def __init__(self):
-        self.Host = connection_settings.HOST
-        self.Port = connection_settings.PORT
-        self.Chan = connection_settings.CHAN 
-        self.Nick = connection_settings.NICK
         self.debug = True
         self.IRC = socket.socket()
-
-        self.Commands = "Commands: register, add-factoid <key> <factoid>,\
-~<factoid-key>, list-keys, delete-key <key>, say <message>, sort <data>"
-
-        self.main_loop()
         
     # IRC Protocol Functions
 
     def connect(self):
-        self.IRC.connect((self.Host, self.Port))
+        self.IRC.connect((HOST, PORT))
         if self.debug: print("Connected to: " + str(self.IRC.getpeername()))
 
     def send_data(self, data):
@@ -29,14 +18,14 @@ class Kazbot(object):
         if self.debug: print("I> " + data)
 
     def login(self):
-        self.send_data("Nick %s" % self.Nick)
-        self.send_data("User %s 0 * :%s" % (self.Nick, self.Nick))
+        self.send_data("Nick %s" % NICK)
+        self.send_data("User %s 0 * :%s" % (NICK, NICK))
 
     def join_channel(self):
-        self.send_data("Join %s" % self.Chan)
+        self.send_data("Join %s" % CHAN)
 
     def msg_chan(self, msg):
-        self.send_data("PRIVMSG %s :%s" % (self.Chan, msg))
+        self.send_data("PRIVMSG %s :%s" % (CHAN, msg))
 
     def msg_user(self, user, msg):
         self.send_data("PRIVMSG %s :%s" % (user, msg))
@@ -48,9 +37,6 @@ class Kazbot(object):
 
     # User Command Functions
 
-    def print_help_msg(self):
-        self.msg_chan(self.Commands)
-        
     def register_user(self, msg):
         name = msg[0]
         database = sqlite3.connect('factoids.db')
@@ -208,12 +194,16 @@ class Kazbot(object):
                 if args[1] == "register": 
                     self.msg_user("NickServ", "ACC %s" % name)
                     return
-                elif args[1] == "help":
-                    self.print_help_msg()
-                    return
                 elif args[1] == "list-keys":
                     self.list_keys(name)
                     return
+                elif args[1] == "help":
+                    help_msg = ('Commands: register, add-factoid <key> '
+                                '<factoid>, ~<factoid-key>, list-keys, '
+                                'delete-key <key>, say <message>, '
+                                'sort <data>')
+
+                    self.msg_chan(help_msg)
 
 
     def main_loop(self):
@@ -229,3 +219,4 @@ class Kazbot(object):
 
 if __name__ == "__main__":
     kazbot = Kazbot()
+    kazbot.main_loop()
