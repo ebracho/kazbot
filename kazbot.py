@@ -93,7 +93,7 @@ class Kazbot(object):
             if match:
                 c.execute("delete from factoids where name=? and key=?", (name, key))
                 database.commit()
-                factoid = (name, key, data)
+            factoid = (name, key, data)
             c.execute("insert into factoids values (?,?,?)", factoid)
             database.commit()
             self.msg_chan("Factoid succesfully entered")
@@ -143,20 +143,23 @@ class Kazbot(object):
         name, msg = self.parse_buff(buff)
         if self.debug: print "Name: %s \nMessage: %s" % (name, msg)
 
+        if len(msg) == 1 and msg[0][0] == '~': # get-factoid command
+            self.get_factoid(name, msg[0][1:])
+
+        if len(msg) < 2: return # Functions below here require 2 arguments
+
         if name == "NickServ" and msg[1] == "ACC": self.register_user(msg) # Step 2 of registering user.
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
+        elif len(msg) > 1 and msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
             self.msg_user("NickServ", "ACC %s" % name)
 
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "add-factoid": # "add-factoid" command
             self.add_factoid(name, msg[2:])
 
-        elif len(msg) == 1 and msg[0][0] == '~': # get-factoid command
-            self.get_factoid(name, msg[0][1:])
-            
-
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "help": # "help" command
-            self.msg_chan("Commands: register, add-factoid <key> <factoid>, say <message>, sort <data>") 
+            self.msg_chan("Commands: register, add-factoid <key> <factoid>, ~<factoid-key>, say <message>, sort <data>") 
+
+        if len(msg) < 3: return # Functions below here require 3 arguments
 
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2: # "say" command
             self.msg_chan(string.join(msg[2:]))
