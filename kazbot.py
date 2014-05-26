@@ -146,20 +146,16 @@ class Kazbot(object):
         if len(msg) == 1 and msg[0][0] == '~': # get-factoid command
             self.get_factoid(name, msg[0][1:])
 
-        if len(msg) < 2: return # Functions below here require 2 arguments
-
         if name == "NickServ" and msg[1] == "ACC": self.register_user(msg) # Step 2 of registering user.
 
         elif len(msg) > 1 and msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
             self.msg_user("NickServ", "ACC %s" % name)
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "add-factoid": # "add-factoid" command
+        elif msg[0].find("kazbot") != -1 and len(msg) > 1 and msg[1].lower() == "add-factoid": # "add-factoid" command
             self.add_factoid(name, msg[2:])
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "help": # "help" command
+        elif msg[0].find("kazbot") != -1 and len(msg) > 1 and msg[1].lower() == "help": # "help" command
             self.msg_chan("Commands: register, add-factoid <key> <factoid>, ~<factoid-key>, say <message>, sort <data>") 
-
-        if len(msg) < 3: return # Functions below here require 3 arguments
 
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2: # "say" command
             self.msg_chan(string.join(msg[2:]))
