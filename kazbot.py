@@ -16,9 +16,6 @@ class Kazbot(object):
         self.Commands = "Commands: register, add-factoid <key> <factoid>,\
 ~<factoid-key>, list-keys, delete-key <key>, say <message>, sort <data>"
 
-        self.connect()
-        self.login()
-        self.join_channel()
         self.main_loop()
         
     # IRC Protocol Functions
@@ -221,6 +218,10 @@ class Kazbot(object):
 
 
     def main_loop(self):
+        self.connect()
+        self.login()
+        self.join_channel()
+
         while True:
             buff = self.IRC.recv(4096)
             if buff and self.debug: print "I< " + buff
