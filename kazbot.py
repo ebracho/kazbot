@@ -37,6 +37,13 @@ class Kazbot(object):
     def pingpong(self, buff):
         buff = buff.split()
         if len(buff) > 1: self.send_data('PONG ' + buff[1])
+
+
+    def process_command(self, buff):
+        buff = buff.split()
+        name = buff[0][1:buff[0].find('!')]
+        msg  = buff[3][1:]
+        if self.debug: print "Name: %s \nMessage: %s" % (name, msg)
         
 
     def main_loop(self):
@@ -44,6 +51,7 @@ class Kazbot(object):
             buff = self.IRC.recv(4096)
             if buff and self.debug: print buff
             if buff.find('PING') != -1: self.pingpong(buff)
+            elif buff.find('PRIVMSG') != -1: self.process_command(buff)
 
 if __name__ == "__main__":
     kazbot = Kazbot()
