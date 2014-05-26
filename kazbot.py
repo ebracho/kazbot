@@ -49,35 +49,27 @@ class Kazbot(object):
     # User Command Functions
 
     def register_user(self, msg):
-        name = (msg[0],)
+        name = msg[0]
         database = sqlite3.connect('factoids.db')
         c = database.cursor()
 
-        c.execute("select * from registered_users where name=?", name)
-        matches = c.fetchall()
-
-        if matches:
-            self.msg_chan("%s is already registered." % msg[0])
+        if self.is_registered(name):
+            self.msg_chan("You've already registered %s!" % msg[0])
         elif msg[2] != '3':
-            self.msg_chan("User must be registered with NickServ to register with kazbot.")
+            self.msg_chan("You must be registered with NickServ to register with kazbot %s!" % name)
         else:
-            c.execute("insert into registered_users values(?)", name)
+            c.execute("insert into registered_users values(?)", (name,))
             database.commit()
-            self.msg_chan("%s succesfuly registered." % msg[0])
+            self.msg_chan("%s succesfuly registered!" % msg[0])
 
         database.close()
 
     def add_factoid(self, name, msg):
         key = msg[0]
         data = string.join(msg[1:])
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
 
-        c.execute("select * from registered_users where name=?", (name,))
-        matches = c.fetchall()
-
-        if not matches:
-            self.msg_chan("%s not registered. To register, type: kazbot register" % name)
+        if not self.is_registered(name):
+            self.msg_chan("You havn't registered yet %s! Type: kazbot register" % name)
             return
         elif len(key) > 30: 
             self.msg_chan("Error: key must be less than 30 chars")
@@ -86,17 +78,59 @@ class Kazbot(object):
             self.msg_chan("Error: data must be less than 300 chars")
             return
 
-        c.execute("select * from factoids where name=?", (name,))
-        factoid_list = c.fetchall()
-        if len(factoid_list) >= 100:
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+
+        c.execute("select key from factoids where name=?", (name,))
+        key_list = c.fetchall()
+
+        c.execute("select * from factoids where name=? and key=?", (name, key))
+        match = c.fetchall()
+
+        if len(key_list) >= 100:
             self.msg_chan("Error: %s has reached their factoid limit of 100 factoids. Damn." % name)
         else:
-            factoid = (name, key, data)
+            if match:
+                c.execute("delete from factoids where name=? and key=?", (name, key))
+                database.commit()
+                factoid = (name, key, data)
             c.execute("insert into factoids values (?,?,?)", factoid)
             database.commit()
             self.msg_chan("Factoid succesfully entered")
 
         database.close()
+
+    def get_factoid(self, name, key):
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+
+        c.execute("select * from factoids where name=?", (name,))
+        factoid_list = c.fetchall()
+        
+        c.execute("select factoid from factoids where name=? and key=?", (name, key))
+        factoid = c.fetchall()
+
+        if not self.is_registered(name): 
+            self.msg_chan("You need to register and add your own factoids %s! Try: kazbot help" % name)
+
+        elif not factoid_list: 
+            self.msg_chan("You don't have any factoids yet, %s. Try: kazbot add-factoid <key> <factoid>" % name)
+
+        elif not factoid:
+            self.msg_chan("You havn't created a factoid with that key %s." % name)
+        
+        else: self.msg_chan(factoid[0][0])
+
+        database.close()
+        
+
+    def is_registered(self, name):
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+        c.execute("select * from registered_users where name=?", (name,))
+        matches = c.fetchall()
+        if matches: return True
+        else: return False
 
     def parse_buff(self, buff):
         buff = buff.split()
@@ -114,16 +148,20 @@ class Kazbot(object):
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
             self.msg_user("NickServ", "ACC %s" % name)
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "add-factoid":
+        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "add-factoid": # "add-factoid" command
             self.add_factoid(name, msg[2:])
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "help":
-            self.msg_chan("Commands: register, add-factoid <key> <factoid>, say <message>, sort <data>")
+        elif len(msg) == 1 and msg[0][0] == '~': # get-factoid command
+            self.get_factoid(name, msg[0][1:])
+            
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2:
+        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "help": # "help" command
+            self.msg_chan("Commands: register, add-factoid <key> <factoid>, say <message>, sort <data>") 
+
+        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2: # "say" command
             self.msg_chan(string.join(msg[2:]))
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "sort" and len(msg) > 2:
+        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "sort" and len(msg) > 2: # "sort" command
             self.msg_chan(string.join(sorted(msg[2:])))
 
     def main_loop(self):
