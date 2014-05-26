@@ -13,6 +13,9 @@ class Kazbot(object):
         self.debug = True
         self.IRC = socket.socket()
 
+        self.Commands = "Commands: register, add-factoid <key> <factoid>,\
+~<factoid-key>, say <message>, sort <data>"
+
         self.connect()
         self.login()
         self.join_channel()
@@ -48,6 +51,9 @@ class Kazbot(object):
 
     # User Command Functions
 
+    def print_help_msg(self):
+        self.msg_chan(self.Commands)
+        
     def register_user(self, msg):
         name = msg[0]
         database = sqlite3.connect('factoids.db')
@@ -141,27 +147,39 @@ class Kazbot(object):
             
     def process_command(self, buff):
         name, msg = self.parse_buff(buff)
+
         if self.debug: print "Name: %s \nMessage: %s" % (name, msg)
 
-        if len(msg) == 1 and msg[0][0] == '~': # get-factoid command
+        if len(msg) == 1 and msg[0].startswith('~'): 
             self.get_factoid(name, msg[0][1:])
 
-        if name == "NickServ" and msg[1] == "ACC": self.register_user(msg) # Step 2 of registering user.
+        elif name == "NickServ" and msg[1] == "ACC": 
+            self.register_user(msg) 
 
-        elif len(msg) > 1 and msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
-            self.msg_user("NickServ", "ACC %s" % name)
+        elif msg[0].find('kazbot') != -1:
+            arg1 = msg[1].lower()
 
-        elif msg[0].find("kazbot") != -1 and len(msg) > 1 and msg[1].lower() == "add-factoid": # "add-factoid" command
-            self.add_factoid(name, msg[2:])
+            if len(msg) > 3:
+                if arg1 == "add-factoid": 
+                    self.add_factoid(name, msg[2:])
+                    return
 
-        elif msg[0].find("kazbot") != -1 and len(msg) > 1 and msg[1].lower() == "help": # "help" command
-            self.msg_chan("Commands: register, add-factoid <key> <factoid>, ~<factoid-key>, say <message>, sort <data>") 
+            if len(msg) > 2:
+                if arg1 == "sort":
+                    self.msg_chan(string.join(sorted(msg[2:])))
+                    return
+                elif arg1 == "say": 
+                    self.msg_chan(string.join(msg[2:]))
+                    return
 
-        elif msg[0].find("kazbot") != -1 and len(msg) > 2 and msg[1].lower() == "say": # "say" command
-            self.msg_chan(string.join(msg[2:]))
+            if len(msg) > 1:
+                if arg1 == "register": 
+                    self.msg_user("NickServ", "ACC %s" % name)
+                    return
+                elif arg1 == "help":
+                    self.print_help_msg()
+                    return
 
-        elif msg[0].find("kazbot") != -1 and len(msg) > 2 and msg[1].lower() == "sort": # "sort" command
-            self.msg_chan(string.join(sorted(msg[2:])))
 
     def main_loop(self):
         while True:
