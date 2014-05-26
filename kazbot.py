@@ -67,6 +67,39 @@ class Kazbot(object):
 
         database.close()
 
+    def add_factoid(self, name, msg):
+        key = msg[0]
+        data = string.join(msg[1:])
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+
+        print name
+
+        c.execute("select * from registered_users where name=?", (name,))
+        matches = c.fetchall()
+
+        if not matches:
+            self.msg_chan("%s not registered. To register, type: kazbot register" % name)
+            return
+        elif len(key) > 30: 
+            self.msg_chan("Error: key must be less than 30 chars")
+            return
+        elif len(data) > 300: 
+            self.msg_chan("Error: data must be less than 300 chars")
+            return
+
+        c.execute("select * from factoids where name=?", (name,))
+        factoid_list = c.fetchall()
+        if len(factoid_list) >= 100:
+            self.msg_chan("Error: %s has reached their factoid limit of 100 factoids. Damn." % name)
+        else:
+            factoid = (name, key, data)
+            c.execute("insert into factoids values (?,?,?)", factoid)
+            database.commit()
+            self.msg_chan("Factoid succesfully entered")
+
+        database.close()
+
     def parse_buff(self, buff):
         buff = buff.split()
         name = buff[0][1:buff[0].find('!')]
@@ -83,8 +116,11 @@ class Kazbot(object):
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "register": # Step 1 of registering user.
             self.msg_user("NickServ", "ACC %s" % name)
 
+        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "add-factoid":
+            self.add_factoid(name, msg[2:])
+
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "help":
-            self.msg_chan("Commands: register, say <message>, sort <data>")
+            self.msg_chan("Commands: register, add-factoid <key> <factoid>, say <message>, sort <data>")
 
         elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2:
             self.msg_chan(string.join(msg[2:]))
