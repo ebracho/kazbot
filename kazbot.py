@@ -73,8 +73,6 @@ class Kazbot(object):
         database = sqlite3.connect('factoids.db')
         c = database.cursor()
 
-        print name
-
         c.execute("select * from registered_users where name=?", (name,))
         matches = c.fetchall()
 
