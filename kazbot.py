@@ -157,10 +157,10 @@ class Kazbot(object):
         elif msg[0].find("kazbot") != -1 and len(msg) > 1 and msg[1].lower() == "help": # "help" command
             self.msg_chan("Commands: register, add-factoid <key> <factoid>, ~<factoid-key>, say <message>, sort <data>") 
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "say" and len(msg) > 2: # "say" command
+        elif msg[0].find("kazbot") != -1 and len(msg) > 2 and msg[1].lower() == "say": # "say" command
             self.msg_chan(string.join(msg[2:]))
 
-        elif msg[0].find("kazbot") != -1 and msg[1].lower() == "sort" and len(msg) > 2: # "sort" command
+        elif msg[0].find("kazbot") != -1 and len(msg) > 2 and msg[1].lower() == "sort": # "sort" command
             self.msg_chan(string.join(sorted(msg[2:])))
 
     def main_loop(self):
