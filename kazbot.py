@@ -32,7 +32,7 @@ class Kazbot(object):
         self.send_data("Join %s" % self.Chan)
 
     def msg_chan(self, msg):
-        self.send_data("PRIVMSG %s :%s" % (self.Chan, msg)
+        self.send_data("PRIVMSG %s :%s" % (self.Chan, msg))
 
     def pingpong(self, buff):
         buff = buff.split()
