@@ -170,49 +170,48 @@ class Kazbot(object):
         else: return False
 
     def parse_buff(self, buff):
-        buff = buff.split()
-        name = buff[0][1:buff[0].find('!')]
-        buff[3] = buff[3].lstrip(':')
-        msg = buff[3:]
-        return name, msg
+        if 'PRIVMSG' in buff or 'NOTICE' in buff:
+            buff = buff.split()
+            name = buff[0][1:buff[0].find('!')]
+            buff[3] = buff[3].lstrip(':')
+            args = buff[3:]
+            self.process_command(name, args)
+
+        elif 'PING' in buff:
+            self.pingpong(buff)
             
-    def process_command(self, buff):
-        name, msg = self.parse_buff(buff)
+    def process_command(self, name, args):
+        if len(args) == 1 and args[0].startswith('~'): 
+            self.get_factoid(name, args[0][1:])
 
-        if self.debug: print "Name: %s \nMessage: %s" % (name, msg)
+        elif name == "NickServ" and args[1] == "ACC": 
+            self.register_user(args) 
 
-        if len(msg) == 1 and msg[0].startswith('~'): 
-            self.get_factoid(name, msg[0][1:])
-
-        elif name == "NickServ" and msg[1] == "ACC": 
-            self.register_user(msg) 
-
-        elif msg[0].find('kazbot') != -1:
-            arg1 = msg[1].lower()
-
-            if len(msg) > 3:
-                if arg1 == "add-factoid": 
-                    self.add_factoid(name, msg[2:])
+        elif 'kazbot' in args[0]:
+            if len(args) > 3:
+                if args[1] == "add-factoid": 
+                    self.add_factoid(name, args[2:])
                     return
 
-            if len(msg) > 2:
-                if arg1 == "sort":
-                    self.msg_chan(string.join(sorted(msg[2:])))
+            if len(args) > 2:
+                if args[1] == "sort":
+                    self.msg_chan(string.join(sorted(args[2:])))
                     return
-                elif arg1 == "say": 
-                    self.msg_chan(string.join(msg[2:]))
+                elif args[1] == "say": 
+                    self.msg_chan(string.join(args[2:]))
                     return
-                elif arg1 == "delete-key":
-                    self.delete_key(name, msg[2])
+                elif args[1] == "delete-key":
+                    self.delete_key(name, args[2])
+                    return
 
-            if len(msg) > 1:
-                if arg1 == "register": 
+            if len(args) > 1:
+                if args[1] == "register": 
                     self.msg_user("NickServ", "ACC %s" % name)
                     return
-                elif arg1 == "help":
+                elif args[1] == "help":
                     self.print_help_msg()
                     return
-                elif arg1 == "list-keys":
+                elif args[1] == "list-keys":
                     self.list_keys(name)
                     return
 
@@ -225,8 +224,7 @@ class Kazbot(object):
         while True:
             buff = self.IRC.recv(4096)
             if buff and self.debug: print "I< " + buff
-            if buff.find('PING') != -1: self.pingpong(buff)
-            elif buff.find('PRIVMSG') != -1 or buff.find('NOTICE') != -1: self.process_command(buff)
+            self.parse_buff(buff)
             
 
 if __name__ == "__main__":
