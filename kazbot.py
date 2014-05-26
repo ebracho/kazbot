@@ -31,6 +31,9 @@ class Kazbot(object):
     def join_channel(self):
         self.send_data("Join %s" % self.Chan)
 
+    def msg_chan(self, msg):
+        self.send_data("PRIVMSG %s :%s" % (self.Chan, msg)
+
     def pingpong(self, buff):
         buff = buff.split()
         if len(buff) > 1: self.send_data('PONG ' + buff[1])
@@ -39,7 +42,7 @@ class Kazbot(object):
     def main_loop(self):
         while True:
             buff = self.IRC.recv(4096)
-            if self.debug: print buff
+            if buff and self.debug: print buff
             if buff.find('PING') != -1: self.pingpong(buff)
 
 if __name__ == "__main__":
