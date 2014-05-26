@@ -129,6 +129,21 @@ class Kazbot(object):
 
         database.close()
         
+    def list_keys(self,name):
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+        c.execute("select key from factoids where name=?", (name,))
+        keys = []
+        for i in c.fetchall():
+            keys.append(str(i[0]))
+
+        if not self.is_registered(name):
+            self.msg_chan("You need to register and add your own factoids %s! Try: kazbot help" % name)
+        elif not keys:
+            self.msg_chan("You don't have any factoids yet, %s. Try: kazbot add-factoid <key> <factoid>" % name)
+        else:
+            self.msg_chan(name + "'s keys: " + str(keys))
+            
 
     def is_registered(self, name):
         database = sqlite3.connect('factoids.db')
@@ -178,6 +193,9 @@ class Kazbot(object):
                     return
                 elif arg1 == "help":
                     self.print_help_msg()
+                    return
+                elif arg1 == "list-keys":
+                    self.list_keys(name)
                     return
 
 
