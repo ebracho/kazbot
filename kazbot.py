@@ -1,31 +1,38 @@
 import socket
-from connection_settings import HOST, PORT, CHAN, nickname, username, realname, pwd, debug
+import connection_settings
 
-IRC = socket.socket()
+class Kazbot(object):
+   
+    def __init__(self):
+        self.Host = connection_settings.HOST
+        self.Port = connection_settings.PORT
+        self.Chan = connection_settings.CHAN 
+        self.Nick = connection_settings.NICK
+        self.debug = True
+        self.IRC = socket.socket()
 
-def connect():
-    IRC.connect((HOST, PORT))
-    if debug == True:
-        print ("Connected to: " + str(IRC.getpeername()))
+        self.connect()
+        self.login()
+        self.join_channel()
+        self.main_loop()
+        
+    def connect(self):
+        self.IRC.connect((self.Host, self.Port))
+        if self.debug: print("Connected to: " + str(self.IRC.getpeername()))
 
-def send_data(msg):
-    IRC.send("%s\r\n" % msg)
-    if debug == True:
-        print("I> " + msg)
+    def send_data(self, data):
+        self.IRC.send("%s\r\n" % data)
+        if self.debug: print("I> " + data)
 
-def login():
-    if pwd != None: send_data("Pass %s" % pwd)
-    send_data("Nick %s" % nickname)
-    send_data("User %s 0 * :%s" % (username, realname))
+    def login(self):
+        self.send_data("Nick %s" % self.Nick)
+        self.send_data("User %s 0 * :%s" % (self.Nick, self.Nick))
 
-def join_channel():
-    send_data("Join %s" % CHAN)
+    def join_channel(self):
+        self.send_data("Join %s" % self.Chan)
 
-def main():
-    connect()
-    login()
-    join_channel()
-
+    def main_loop(self):
+        while True: pass
 
 if __name__ == "__main__":
-    main()
+    kazbot = Kazbot()
