@@ -14,7 +14,7 @@ class Kazbot(object):
         self.IRC = socket.socket()
 
         self.Commands = "Commands: register, add-factoid <key> <factoid>,\
-~<factoid-key>, say <message>, sort <data>"
+~<factoid-key>, list-keys, delete-key <key>, say <message>, sort <data>"
 
         self.connect()
         self.login()
@@ -123,7 +123,7 @@ class Kazbot(object):
             self.msg_chan("You don't have any factoids yet, %s. Try: kazbot add-factoid <key> <factoid>" % name)
 
         elif not factoid:
-            self.msg_chan("You havn't created a factoid with that key %s." % name)
+            self.msg_chan("You don't have a factoid with that key %s." % name)
         
         else: self.msg_chan(factoid[0][0])
 
@@ -143,6 +143,25 @@ class Kazbot(object):
             self.msg_chan("You don't have any factoids yet, %s. Try: kazbot add-factoid <key> <factoid>" % name)
         else:
             self.msg_chan(name + "'s keys: " + str(keys))
+
+        database.close()
+          
+    def delete_key(self, name, key):
+        database = sqlite3.connect('factoids.db')
+        c = database.cursor()
+        c.execute("select * from factoids where name=? and key=?", (name, key))
+        factoids = c.fetchall()
+
+        if not self.is_registered(name):
+            self.msg_chan("You need to register and add your own factoids %s! Try: kazbot help" % name)
+        elif not factoids:
+            self.msg_chan("Key not found")
+        else:
+            c.execute("delete from factoids where name=? and key =?", (name, key))
+            database.commit()
+            self.msg_chan("Key succesfuly deleted")
+    
+        database.close()
             
 
     def is_registered(self, name):
@@ -186,6 +205,8 @@ class Kazbot(object):
                 elif arg1 == "say": 
                     self.msg_chan(string.join(msg[2:]))
                     return
+                elif arg1 == "delete-key":
+                    self.delete_key(name, msg[2])
 
             if len(msg) > 1:
                 if arg1 == "register": 
