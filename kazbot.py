@@ -1,31 +1,40 @@
-import socket, sqlite3, string, os
-from connection_settings import HOST, PORT, CHAN, NICK
+import socket, sqlite3, string, os, threading
 
 class Kazbot(object):
    
-    def __init__(self):
-        self.debug = True
+    def __init__(self, host, port, chan, nick, user, real, pwd=None, debug=False):
+        self.HOST = host
+        self.PORT = port
+        self.CHAN = chan
+        self.NICK = nick
+        self.USER = user
+        self.REAL = real
+        self.PWD  = pwd
+        self.DEBUG = debug
+
+        self.running = False
         self.IRC = socket.socket()
         
     # IRC Protocol Functions
 
     def connect(self):
-        self.IRC.connect((HOST, PORT))
-        if self.debug: print("Connected to: " + str(self.IRC.getpeername()))
+        self.IRC.connect((self.HOST, self.PORT))
+        if self.DEBUG: print("Connected to: " + str(self.IRC.getpeername()))
 
     def send_data(self, data):
         self.IRC.send("%s\r\n" % data)
-        if self.debug: print("I> " + data)
+        if self.DEBUG: print("I> " + data)
 
     def login(self):
-        self.send_data("Nick %s" % NICK)
-        self.send_data("User %s 0 * :%s" % (NICK, NICK))
+        if self.PWD: self.send_data("PASS %s" % self.PWD)
+        self.send_data("Nick %s" % self.NICK)
+        self.send_data("User %s 0 * :%s" % (self.USER, self.REAL))
 
     def join_channel(self):
-        self.send_data("Join %s" % CHAN)
+        self.send_data("Join %s" % self.CHAN)
 
     def msg_chan(self, msg):
-        self.send_data("PRIVMSG %s :%s" % (CHAN, msg))
+        self.send_data("PRIVMSG %s :%s" % (self.CHAN, msg))
 
     def msg_user(self, user, msg):
         self.send_data("PRIVMSG %s :%s" % (user, msg))
@@ -39,7 +48,7 @@ class Kazbot(object):
     def initialize_database(self):
         if not os.path.isfile('factoids.db'):
             # Database does not exist - must create tables
-            self.database = sqlite3.connect('factoids.db')
+            self.database = sqlite3.connect('factoids.db', check_same_thread = False)
             self.dbcursor = self.database.cursor()
             self.dbcursor.execute('''CREATE TABLE registered_users
                                      (name varchar(16))''')
@@ -48,7 +57,7 @@ class Kazbot(object):
                                       factoid varchar(300))''')
             self.database.commit()
         else:
-            self.database = sqlite3.connect('factoids.db')
+            self.database = sqlite3.connect('factoids.db', check_same_thread = False)
             self.dbcursor = self.database.cursor()
 
 
@@ -198,26 +207,43 @@ class Kazbot(object):
 
                     self.msg_chan(help_msg)
 
+    def run(self):
+        if self.running:
+            raise Exception("Error: run() cannot be called while bot is running.")
 
-    def main_loop(self):
-        # Connect to database
-        self.initialize_database()
-        # self.database = sqlite3.connect('factoids.db')
-        # self.dbcursor = self.database.cursor()
+        self.initialize_database() # Connect to database in run() so that
+        self.running = True        # run can be threaded without causing
+                                   # problems with sqlite3
 
-        # Connect to IRC channel
+        # Connect to IRC
         self.connect()
         self.login()
         self.join_channel()
 
-        while True:
+        while self.running:
             buff = self.IRC.recv(4096)
-            if buff and self.debug: print "I< " + buff
+            if buff and self.DEBUG: print "I< " + buff
             self.parse_buff(buff)
+            print "run loop iteration. self.running is %s" % self.running
 
-        self.database.close()
-            
+        database.close()
+
+    def close(self):
+        self.running = False
 
 if __name__ == "__main__":
-    kazbot = Kazbot()
-    kazbot.main_loop()
+    kazbot2 = Kazbot("irc.freenode.net", 6667, "#pqpqp", 
+                    "kazbot", "kazbot", "kazlock's bot")
+
+    thread2 = threading.Thread( target=kazbot2.run, args=() )
+    thread2.start()
+
+    while True:
+        cmd = raw_input('> ')
+        if cmd == 'quit': 
+            print("Disconnecting bot(s)...")
+            kazbot2.close()
+            thread2.join()
+            break
+            
+    
