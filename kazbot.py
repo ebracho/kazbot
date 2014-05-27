@@ -39,19 +39,15 @@ class Kazbot(object):
 
     def register_user(self, msg):
         name = msg[0]
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
 
         if self.is_registered(name):
             self.msg_chan("You've already registered %s!" % msg[0])
         elif msg[2] != '3':
             self.msg_chan("You must be registered with NickServ to register with kazbot %s!" % name)
         else:
-            c.execute("insert into registered_users values(?)", (name,))
-            database.commit()
+            self.dbcursor.execute("insert into registered_users values(?)", (name,))
+            self.database.commit()
             self.msg_chan("%s succesfuly registered!" % msg[0])
-
-        database.close()
 
     def add_factoid(self, name, msg):
         key = msg[0]
@@ -67,37 +63,29 @@ class Kazbot(object):
             self.msg_chan("Error: data must be less than 300 chars")
             return
 
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
+        self.dbcursor.execute("select key from factoids where name=?", (name,))
+        key_list = self.dbcursor.fetchall()
 
-        c.execute("select key from factoids where name=?", (name,))
-        key_list = c.fetchall()
-
-        c.execute("select * from factoids where name=? and key=?", (name, key))
-        match = c.fetchall()
+        self.dbcursor.execute("select * from factoids where name=? and key=?", (name, key))
+        match = self.dbcursor.fetchall()
 
         if len(key_list) >= 100:
             self.msg_chan("Error: %s has reached their factoid limit of 100 factoids. Damn." % name)
         else:
             if match:
-                c.execute("delete from factoids where name=? and key=?", (name, key))
-                database.commit()
+                self.dbcursor.execute("delete from factoids where name=? and key=?", (name, key))
+                self.database.commit()
             factoid = (name, key, data)
-            c.execute("insert into factoids values (?,?,?)", factoid)
-            database.commit()
+            self.dbcursor.execute("insert into factoids values (?,?,?)", factoid)
+            self.database.commit()
             self.msg_chan("Factoid succesfully entered")
 
-        database.close()
-
     def get_factoid(self, name, key):
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
-
-        c.execute("select * from factoids where name=?", (name,))
-        factoid_list = c.fetchall()
+        self.dbcursor.execute("select * from factoids where name=?", (name,))
+        factoid_list = self.dbcursor.fetchall()
         
-        c.execute("select factoid from factoids where name=? and key=?", (name, key))
-        factoid = c.fetchall()
+        self.dbcursor.execute("select factoid from factoids where name=? and key=?", (name, key))
+        factoid = self.dbcursor.fetchall()
 
         if not self.is_registered(name): 
             self.msg_chan("You need to register and add your own factoids %s! Try: kazbot help" % name)
@@ -109,15 +97,12 @@ class Kazbot(object):
             self.msg_chan("You don't have a factoid with that key %s." % name)
         
         else: self.msg_chan(factoid[0][0])
-
-        database.close()
         
     def list_keys(self,name):
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
-        c.execute("select key from factoids where name=?", (name,))
+        self.dbcursor.execute("select key from factoids where name=?", (name,))
+
         keys = []
-        for i in c.fetchall():
+        for i in self.dbcursor.fetchall():
             keys.append(str(i[0]))
 
         if not self.is_registered(name):
@@ -126,32 +111,23 @@ class Kazbot(object):
             self.msg_chan("You don't have any factoids yet, %s. Try: kazbot add-factoid <key> <factoid>" % name)
         else:
             self.msg_chan(name + "'s keys: " + str(keys))
-
-        database.close()
           
     def delete_key(self, name, key):
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
-        c.execute("select * from factoids where name=? and key=?", (name, key))
-        factoids = c.fetchall()
+        self.dbcursor.execute("select * from factoids where name=? and key=?", (name, key))
+        factoids = self.dbcursor.fetchall()
 
         if not self.is_registered(name):
             self.msg_chan("You need to register and add your own factoids %s! Try: kazbot help" % name)
         elif not factoids:
             self.msg_chan("Key not found")
         else:
-            c.execute("delete from factoids where name=? and key =?", (name, key))
-            database.commit()
+            self.dbcursor.execute("delete from factoids where name=? and key =?", (name, key))
+            self.database.commit()
             self.msg_chan("Key succesfuly deleted")
-    
-        database.close()
-            
 
     def is_registered(self, name):
-        database = sqlite3.connect('factoids.db')
-        c = database.cursor()
-        c.execute("select * from registered_users where name=?", (name,))
-        matches = c.fetchall()
+        self.dbcursor.execute("select * from registered_users where name=?", (name,))
+        matches = self.dbcursor.fetchall()
         if matches: return True
         else: return False
 
@@ -207,6 +183,11 @@ class Kazbot(object):
 
 
     def main_loop(self):
+        # Connect to database
+        self.database = sqlite3.connect('factoids.db')
+        self.dbcursor = self.database.cursor()
+
+        # Connect to IRC channel
         self.connect()
         self.login()
         self.join_channel()
@@ -215,6 +196,8 @@ class Kazbot(object):
             buff = self.IRC.recv(4096)
             if buff and self.debug: print "I< " + buff
             self.parse_buff(buff)
+
+        self.database.close()
             
 
 if __name__ == "__main__":
