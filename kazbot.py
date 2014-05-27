@@ -1,4 +1,4 @@
-import socket, sqlite3, string
+import socket, sqlite3, string, os
 from connection_settings import HOST, PORT, CHAN, NICK
 
 class Kazbot(object):
@@ -33,6 +33,23 @@ class Kazbot(object):
     def pingpong(self, buff):
         buff = buff.split()
         if len(buff) > 1: self.send_data('PONG ' + buff[1])
+
+    # Database functions
+    
+    def initialize_database(self):
+        if not os.path.isfile('factoids.db'):
+            # Database does not exist - must create tables
+            self.database = sqlite3.connect('factoids.db')
+            self.dbcursor = self.database.cursor()
+            self.dbcursor.execute('''CREATE TABLE registered_users
+                                     (name varchar(16))''')
+            self.dbcursor.execute('''CREATE TABLE factoids
+                                     (name varchar(16), key varchar(30), 
+                                      factoid varchar(300))''')
+            self.database.commit()
+        else:
+            self.database = sqlite3.connect('factoids.db')
+            self.dbcursor = self.database.cursor()
 
 
     # User Command Functions
@@ -184,8 +201,9 @@ class Kazbot(object):
 
     def main_loop(self):
         # Connect to database
-        self.database = sqlite3.connect('factoids.db')
-        self.dbcursor = self.database.cursor()
+        self.initialize_database()
+        # self.database = sqlite3.connect('factoids.db')
+        # self.dbcursor = self.database.cursor()
 
         # Connect to IRC channel
         self.connect()
